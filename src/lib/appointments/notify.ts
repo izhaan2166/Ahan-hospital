@@ -16,8 +16,11 @@ export interface AppointmentNotifier {
   send(request: AppointmentRequest, reference: string, labels: AppointmentLabels): Promise<NotifyResult>;
 }
 
+/** Reads a setting, ignoring spaces or quotes pasted around it in a hosting dashboard. */
+const setting = (value: string | undefined) => value?.trim().replace(/^["']|["']$/g, "").trim() || undefined;
+
 export function isEmailConfigured(env: NodeJS.ProcessEnv = process.env): boolean {
-  return Boolean(env.RESEND_API_KEY && env.APPOINTMENT_NOTIFY_TO);
+  return Boolean(setting(env.RESEND_API_KEY) && setting(env.APPOINTMENT_NOTIFY_TO));
 }
 
 const escapeHtml = (value: string) =>
@@ -91,11 +94,11 @@ export const emailNotifier: AppointmentNotifier = {
     try {
       const res = await fetch(RESEND_ENDPOINT, {
         method: "POST",
-        headers: { authorization: `Bearer ${process.env.RESEND_API_KEY}`, "content-type": "application/json" },
+        headers: { authorization: `Bearer ${setting(process.env.RESEND_API_KEY)}`, "content-type": "application/json" },
         body: JSON.stringify({
           // Resend's shared test sender works without verifying a domain.
-          from: process.env.APPOINTMENT_NOTIFY_FROM || `${site.name} website <onboarding@resend.dev>`,
-          to: [process.env.APPOINTMENT_NOTIFY_TO],
+          from: setting(process.env.APPOINTMENT_NOTIFY_FROM) || `${site.name} website <onboarding@resend.dev>`,
+          to: [setting(process.env.APPOINTMENT_NOTIFY_TO)],
           reply_to: request.email || undefined,
           subject,
           text,
