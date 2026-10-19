@@ -19,6 +19,15 @@ export interface AppointmentNotifier {
 /** Reads a setting, ignoring spaces or quotes pasted around it in a hosting dashboard. */
 const setting = (value: string | undefined) => value?.trim().replace(/^["']|["']$/g, "").trim() || undefined;
 
+/**
+ * Describes the shape of the API key for troubleshooting, without revealing
+ * it: whether it has Resend's prefix, its length, and any stray characters.
+ */
+export function describeKey(raw: string | undefined): string {
+  const key = setting(raw) ?? "";
+  return `key_prefix_ok=${key.startsWith("re_")} key_length=${key.length} key_has_space=${/\s/.test(key)} key_has_equals=${key.includes("=")}`;
+}
+
 export function isEmailConfigured(env: NodeJS.ProcessEnv = process.env): boolean {
   return Boolean(setting(env.RESEND_API_KEY) && setting(env.APPOINTMENT_NOTIFY_TO));
 }
@@ -109,7 +118,7 @@ export const emailNotifier: AppointmentNotifier = {
       if (!res.ok) {
         // Log the status and Resend's error name only; never the patient's details.
         const name = ((await res.json().catch(() => ({}))) as { name?: string }).name ?? "unknown";
-        console.error(`appointment_email_failed status=${res.status} name=${name}`);
+        console.error(`appointment_email_failed status=${res.status} name=${name} ${describeKey(process.env.RESEND_API_KEY)}`);
         return { status: "failed" };
       }
       return { status: "sent" };

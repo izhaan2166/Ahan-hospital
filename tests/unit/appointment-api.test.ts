@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { handleAppointmentRequest, MAX_BODY_BYTES } from "@/lib/appointments/handler";
 import type { AppointmentStore } from "@/lib/appointments/store";
-import { buildAppointmentEmail, type AppointmentNotifier } from "@/lib/appointments/notify";
+import { buildAppointmentEmail, describeKey, type AppointmentNotifier } from "@/lib/appointments/notify";
 import { createRateLimiter } from "@/lib/appointments/rate-limit";
 
 // 06:30 UTC on 10 March 2026 is midday in India, so "today" is 2026-03-10.
@@ -214,5 +214,14 @@ describe("POST /api/appointments rate limit", () => {
       expect((await handleAppointmentRequest(fromIp("203.0.113.9", { ...body, phone: "nope" }), { store, rateLimiter, now: NOW })).status).toBe(422);
     }
     expect((await handleAppointmentRequest(fromIp("203.0.113.9"), { store, rateLimiter, now: NOW })).status).toBe(201);
+  });
+});
+
+describe("describeKey", () => {
+  it("reports the key's shape without revealing it", () => {
+    const out = describeKey(' "re_abcdefgh" ');
+    expect(out).toBe("key_prefix_ok=true key_length=11 key_has_space=false key_has_equals=false");
+    expect(out).not.toContain("abcdefgh");
+    expect(describeKey("RESEND_API_KEY=re_abc")).toContain("key_prefix_ok=false");
   });
 });
